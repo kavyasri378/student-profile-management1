@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
   User, 
@@ -8,7 +8,7 @@ import {
   ArrowLeft,
   Loader2
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 const EditStudent = () => {
@@ -49,13 +49,9 @@ const EditStudent = () => {
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState({});
 
-  useEffect(() => {
-    fetchStudentProfile();
-  }, [id]);
-
-  const fetchStudentProfile = async () => {
+  const fetchStudentProfile = useCallback(async () => {
     try {
-      const res = await axios.get(`/api/profile/${id}`);
+      const res = await api.get(`/api/profile/${id}`);
       const profile = res.data.data;
       
       setFormData({
@@ -88,7 +84,11 @@ const EditStudent = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchStudentProfile();
+  }, [id, fetchStudentProfile]);
 
   const handleChange = (section, field, value) => {
     setFormData(prev => ({
@@ -215,7 +215,7 @@ const EditStudent = () => {
         }
       };
 
-      await axios.put(`/api/profile/${id}`, submitData);
+      await api.put(`/api/profile/${id}`, submitData);
       toast.success('Student profile updated successfully!');
       navigate('/admin-dashboard');
     } catch (error) {

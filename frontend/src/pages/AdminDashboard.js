@@ -1,19 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Users, 
   Search, 
-  Filter, 
   Edit, 
   Trash2, 
-  Plus,
   DollarSign,
   UserCheck,
-  UserX,
-  BookOpen,
-  TrendingUp
+  UserX
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
@@ -27,21 +23,16 @@ const AdminDashboard = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  useEffect(() => {
-    fetchStats();
-    fetchStudents();
-  }, [currentPage, searchTerm, filterCourse, filterYear]);
-
   const fetchStats = async () => {
     try {
-      const res = await axios.get('/api/profile/stats/dashboard');
+      const res = await api.get('/api/profile/stats/dashboard');
       setStats(res.data.data);
     } catch (error) {
       console.error('Error fetching stats:', error);
     }
   };
 
-  const fetchStudents = async () => {
+  const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -53,7 +44,7 @@ const AdminDashboard = () => {
       if (filterCourse) params.append('course', filterCourse);
       if (filterYear) params.append('year', filterYear);
 
-      const res = await axios.get(`/api/profile/all?${params}`);
+      const res = await api.get(`/api/profile/all?${params}`);
       setStudents(res.data.data);
       setTotalPages(res.data.pagination.pages);
     } catch (error) {
@@ -62,7 +53,12 @@ const AdminDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentPage, searchTerm, filterCourse, filterYear]);
+
+  useEffect(() => {
+    fetchStats();
+    fetchStudents();
+  }, [currentPage, searchTerm, filterCourse, filterYear, fetchStudents]);
 
   const handleDelete = async (studentId) => {
     if (!window.confirm('Are you sure you want to delete this student profile?')) {
@@ -70,7 +66,7 @@ const AdminDashboard = () => {
     }
 
     try {
-      await axios.delete(`/api/profile/${studentId}`);
+      await api.delete(`/api/profile/${studentId}`);
       toast.success('Student profile deleted successfully');
       fetchStudents();
       fetchStats();
@@ -89,14 +85,6 @@ const AdminDashboard = () => {
       style: 'currency',
       currency: 'INR'
     }).format(amount);
-  };
-
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
   };
 
   const clearFilters = () => {

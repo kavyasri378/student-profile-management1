@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { User, BookOpen, DollarSign, Save, ArrowLeft } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 const ProfileForm = () => {
@@ -174,7 +174,7 @@ const ProfileForm = () => {
         }
       };
 
-      await axios.post('/api/profile', submitData);
+      await api.post('/api/profile', submitData);
       await updateProfileCompletion();
       
       toast.success('Profile created successfully!');

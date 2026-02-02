@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import api from '../utils/api';
 import toast from 'react-hot-toast';
 
 // Create context
@@ -72,28 +72,32 @@ export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
   // Set auth token header
-  const setAuthToken = (token) => {
+  const setAuthTokenLocal = (token) => {
     if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
     } else {
-      delete axios.defaults.headers.common['Authorization'];
+      delete api.defaults.headers.common['Authorization'];
     }
   };
 
   // Load user
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     const token = localStorage.getItem('token');
     
     if (token) {
-      setAuthToken(token);
+      setAuthTokenLocal(token);
       try {
-        const res = await axios.get('/api/auth/me');
+        const res = await api.get('/api/auth/me');
         dispatch({
           type: LOAD_USER,
           payload: res.data.user,
         });
       } catch (error) {
         console.error('Load user error:', error);
+        // Don't show toast for network errors in production
+        if (process.env.NODE_ENV === 'development') {
+          toast.error('Failed to load user. Backend may be unavailable.');
+        }
         dispatch({
           type: AUTH_FAIL,
         });
@@ -103,19 +107,19 @@ export const AuthProvider = ({ children }) => {
         type: AUTH_FAIL,
       });
     }
-  };
+  }, []);
 
   // Register user
   const register = async (formData) => {
     try {
-      const res = await axios.post('/api/auth/register', formData);
+      const res = await api.post('/api/auth/register', formData);
       
       dispatch({
         type: AUTH_SUCCESS,
         payload: res.data,
       });
 
-      setAuthToken(res.data.token);
+      setAuthTokenLocal(res.data.token);
       toast.success('Registration successful!');
       
       return res.data;
@@ -133,14 +137,14 @@ export const AuthProvider = ({ children }) => {
   // Login user
   const login = async (formData) => {
     try {
-      const res = await axios.post('/api/auth/login', formData);
+      const res = await api.post('/api/auth/login', formData);
       
       dispatch({
         type: AUTH_SUCCESS,
         payload: res.data,
       });
 
-      setAuthToken(res.data.token);
+      setAuthTokenLocal(res.data.token);
       toast.success('Login successful!');
       
       return res.data;
@@ -157,7 +161,7 @@ export const AuthProvider = ({ children }) => {
 
   // Logout
   const logout = () => {
-    setAuthToken(null);
+    setAuthTokenLocal(null);
     dispatch({
       type: LOGOUT,
     });
@@ -167,7 +171,7 @@ export const AuthProvider = ({ children }) => {
   // Update profile completion
   const updateProfileCompletion = async () => {
     try {
-      await axios.put('/api/auth/profile-completed');
+      await api.put('/api/auth/profile-completed');
       dispatch({
         type: LOAD_USER,
         payload: { ...state.user, profileCompleted: true },
@@ -188,7 +192,14 @@ export const AuthProvider = ({ children }) => {
   // Load user on initial render
   useEffect(() => {
     loadUser();
-  }, []);
+    
+    // Set a timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      dispatch({ type: AUTH_FAIL });
+    }, 10000); // 10 seconds timeout
+    
+    return () => clearTimeout(timeout);
+  }, [loadUser]);
 
   const value = {
     ...state,

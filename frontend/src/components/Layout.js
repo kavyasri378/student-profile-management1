@@ -5,11 +5,7 @@ import {
   Home, 
   User, 
   Users, 
-  Settings, 
-  LogOut, 
-  BookOpen,
-  DollarSign,
-  Edit
+  LogOut
 } from 'lucide-react';
 
 const Layout = () => {

@@ -1,32 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { 
   User, 
   BookOpen, 
   DollarSign, 
   Calendar,
-  Phone,
-  Mail,
   MapPin,
-  Award,
-  CreditCard
+  Award
 } from 'lucide-react';
-import axios from 'axios';
+import api from '../utils/api';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchProfile();
-  }, []);
-
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     try {
-      const res = await axios.get('/api/profile/me');
+      const res = await api.get('/api/profile/me');
       setProfile(res.data.data);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -37,7 +28,11 @@ const StudentDashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    fetchProfile();
+  }, [fetchProfile]);
 
   if (loading) {
     return (
