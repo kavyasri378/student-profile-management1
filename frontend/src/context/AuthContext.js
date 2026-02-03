@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
-import api from '../utils/api';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import api, { setAuthToken } from '../utils/api';
 import toast from 'react-hot-toast';
 
-// Create context
+// Create our authentication context
 const AuthContext = createContext();
 
-// Initial state
+// Initial state for authentication
 const initialState = {
   user: null,
   token: localStorage.getItem('token'),
@@ -13,18 +13,17 @@ const initialState = {
   isAuthenticated: false,
 };
 
-// Action types
+// Action types for our reducer
 const AUTH_SUCCESS = 'AUTH_SUCCESS';
 const AUTH_FAIL = 'AUTH_FAIL';
 const LOGOUT = 'LOGOUT';
 const LOAD_USER = 'LOAD_USER';
 const CLEAR_ERRORS = 'CLEAR_ERRORS';
 
-// Reducer
+// Reducer function to handle state changes
 const authReducer = (state, action) => {
   switch (action.type) {
     case AUTH_SUCCESS:
-      localStorage.setItem('token', action.payload.token);
       return {
         ...state,
         user: action.payload.user,
@@ -33,7 +32,6 @@ const authReducer = (state, action) => {
         loading: false,
       };
     case AUTH_FAIL:
-      localStorage.removeItem('token');
       return {
         ...state,
         user: null,
@@ -42,7 +40,6 @@ const authReducer = (state, action) => {
         loading: false,
       };
     case LOGOUT:
-      localStorage.removeItem('token');
       return {
         ...state,
         user: null,
@@ -67,11 +64,11 @@ const authReducer = (state, action) => {
   }
 };
 
-// Auth provider component
+// Authentication provider component
 export const AuthProvider = ({ children }) => {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Set auth token header
+  // Helper function to set auth token in headers
   const setAuthTokenLocal = (token) => {
     if (token) {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -80,8 +77,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Load user
-  const loadUser = useCallback(async () => {
+  // Load user data from server
+  const loadUser = async () => {
     const token = localStorage.getItem('token');
     
     if (token) {
@@ -94,10 +91,6 @@ export const AuthProvider = ({ children }) => {
         });
       } catch (error) {
         console.error('Load user error:', error);
-        // Don't show toast for network errors in production
-        if (process.env.NODE_ENV === 'development') {
-          toast.error('Failed to load user. Backend may be unavailable.');
-        }
         dispatch({
           type: AUTH_FAIL,
         });
@@ -107,9 +100,9 @@ export const AuthProvider = ({ children }) => {
         type: AUTH_FAIL,
       });
     }
-  }, []);
+  };
 
-  // Register user
+  // Register new user
   const register = async (formData) => {
     try {
       const res = await api.post('/api/auth/register', formData);
@@ -159,7 +152,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Logout
+  // Logout user
   const logout = () => {
     setAuthTokenLocal(null);
     dispatch({
@@ -168,7 +161,7 @@ export const AuthProvider = ({ children }) => {
     toast.success('Logged out successfully');
   };
 
-  // Update profile completion
+  // Update profile completion status
   const updateProfileCompletion = async () => {
     try {
       await api.put('/api/auth/profile-completed');
@@ -182,25 +175,19 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Clear errors
+  // Clear any errors
   const clearErrors = () => {
     dispatch({
       type: CLEAR_ERRORS,
     });
   };
 
-  // Load user on initial render
+  // Load user data when component mounts
   useEffect(() => {
     loadUser();
-    
-    // Set a timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      dispatch({ type: AUTH_FAIL });
-    }, 10000); // 10 seconds timeout
-    
-    return () => clearTimeout(timeout);
-  }, [loadUser]);
+  }, []);
 
+  // Provide context value to children
   const value = {
     ...state,
     register,

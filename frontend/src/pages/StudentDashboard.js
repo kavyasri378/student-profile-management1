@@ -1,24 +1,33 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { 
   User, 
   BookOpen, 
   DollarSign, 
   Calendar,
+  Phone,
+  Mail,
   MapPin,
-  Award
+  Award,
+  CreditCard
 } from 'lucide-react';
 import api from '../utils/api';
+import { formatDate, formatCurrency, calculatePendingFees, getFeeStatus } from '../utils/helpers';
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // State management
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Fetch student profile data from server
   const fetchProfile = useCallback(async () => {
     try {
-      const res = await api.get('/api/profile/me');
-      setProfile(res.data.data);
+      const response = await api.get('/api/profile/me');
+      setProfile(response.data.data);
     } catch (error) {
       console.error('Error fetching profile:', error);
       // If profile doesn't exist, redirect to profile form
@@ -30,10 +39,12 @@ const StudentDashboard = () => {
     }
   }, [navigate]);
 
+  // Load profile data when component mounts
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
 
+  // Show loading spinner while fetching data
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
